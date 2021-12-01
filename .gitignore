@@ -1,6 +1,6 @@
 build
-artifactrs/bin
-artifactrs/lib
-artifactrs/lib_wasm
+artifacts/bin
+artifacts/lib
+artifacts/lib_wasm
 artifacts/served/example_wasm.*
 CMakeLists.txt.user
