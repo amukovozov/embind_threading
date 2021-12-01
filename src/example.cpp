@@ -61,6 +61,7 @@ static uint32_t GetFinalResult(uint64_t* p_values_0, uint64_t* p_values_1) {
 }
 
 
+/// THIS WORKS FINE
 uint32_t Processor::ProcessNoThreads(uint32_t n) {
   std::cout << "START ProcessNoThreads" << std::endl;
 
@@ -92,6 +93,7 @@ uint32_t Processor::ProcessNoThreads(uint32_t n) {
 }
 
 
+/// THIS ALSO WORKS
 uint32_t Processor::ProcessThreadsFlat(uint32_t n) {
   std::cout << "START ProcessThreadsFlat" << std::endl;;
 
@@ -134,6 +136,7 @@ uint32_t Processor::ProcessThreadsFlat(uint32_t n) {
 }
 
 
+/// THIS FAILS
 uint32_t Processor::ProcessThreadsNested(uint32_t n) {
   std::cout << "START ProcessThreadsNested" << std::endl;
 
