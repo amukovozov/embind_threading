@@ -20,3 +20,5 @@ The actual processing is irrelevant to the issue, it’s just some mock number-c
 `Tried to spawn a new thread, but the thread pool is exhausted`,
 and never finishes execution.
 However, the total number of spawned threads should never exceed the pool size by design of the example.
+
+The example initializes the WASM module from a web-worker; without the worker (doing the same from the main browser thread) the same issue is observed, but it also blocks the main thread which is not convenient.
