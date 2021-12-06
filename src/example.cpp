@@ -7,6 +7,8 @@
 #include <iostream>
 
 
+constexpr uint64_t N_ARRAYS = 2;
+
 constexpr uint64_t N_VALUES = 6;
 
 constexpr uint64_t N_FLAT_THREADS = N_VALUES;
@@ -21,10 +23,10 @@ static_assert(
     "check sufficient thread pool size");
 
 
-static void Output(const std::string& prefix, uint64_t p_values[N_VALUES]) {
+static void Output(const std::string& prefix, uint64_t p_array[N_VALUES]) {
   std::cout << prefix;
   for (uint64_t i = 0; i < N_VALUES; ++i) {
-    std::cout << p_values[i] << " ";
+    std::cout << p_array[i] << " ";
   }
   std::cout << std::endl;
 }
@@ -49,14 +51,21 @@ static void ProcessOneValueInplace(uint64_t* p_value) {
 
 
 /// get some single value as a result for two arrays (no threading here)
-static uint32_t GetFinalResult(uint64_t* p_values_0, uint64_t* p_values_1) {
+static uint32_t GetFinalResult(uint64_t p_arrays[N_ARRAYS][N_VALUES]) {
   /// specific processing here is not really important
   uint64_t result = 0;
-  for (uint64_t i = 0; i < N_VALUES; ++i) {
-    uint64_t mx = std::max(p_values_1[i], p_values_0[i]);
-    uint64_t mn = std::min(p_values_1[i], p_values_0[i]);
-    result += mx - mn;
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    uint64_t subresult = 0;
+    for (uint64_t j = 0; j < N_VALUES; ++j) {
+      subresult ^= p_arrays[i][j];
+    }
+    result += subresult;
   }
+//  for (uint64_t i = 0; i < N_VALUES; ++i) {
+//    uint64_t mx = std::max(p_values_1[i], p_values_0[i]);
+//    uint64_t mn = std::min(p_values_1[i], p_values_0[i]);
+//    result += mx - mn;
+//  }
   return static_cast<uint32_t>(result);
 }
 
@@ -65,31 +74,33 @@ static uint32_t GetFinalResult(uint64_t* p_values_0, uint64_t* p_values_1) {
 uint32_t Processor::ProcessNoThreads(uint32_t n) {
   std::cout << "START ProcessNoThreads" << std::endl;
 
-  uint64_t values[2][N_VALUES];
+  uint64_t arrays[N_ARRAYS][N_VALUES];
 
-  for (uint64_t i = 0; i < N_VALUES; ++i) {
-    values[0][i] = n + i;
-    values[1][i] = n + i + 1;
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    for (uint64_t j = 0; j < N_VALUES; ++j) {
+      arrays[i][j] = n + i + j;
+    }
   }
 
-  Output("Before processing:   ", values[0]);
-  Output("                     ", values[1]);
-
-  for (uint64_t i = 0; i < N_VALUES; ++i) {
-    ProcessOneValueInplace(&values[0][i]);
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    if (!i) {
+      Output("Before processing:   ", arrays[i]);
+    } else {
+      Output("                     ", arrays[i]);
+    }
   }
 
-  Output("values[0] processed: ", values[0]);
-
-  for (uint64_t i = 0; i < N_VALUES; ++i) {
-    ProcessOneValueInplace(&values[1][i]);
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    for (uint64_t j = 0; j < N_VALUES; ++j) {
+      ProcessOneValueInplace(&arrays[i][j]);
+    }
+    std::string prefix = "arrays[" + std::to_string(i) + "] processed: ";
+    Output(prefix, arrays[i]);
   }
-
-  Output("values[1] processed: ", values[1]);
 
   std::cout << std::endl;
 
-  return GetFinalResult(values[0], values[1]);
+  return GetFinalResult(arrays);
 }
 
 
@@ -97,10 +108,12 @@ uint32_t Processor::ProcessNoThreads(uint32_t n) {
 uint32_t Processor::ProcessThreadsFlat(uint32_t n) {
   std::cout << "START ProcessThreadsFlat" << std::endl;;
 
-  uint64_t values[2][N_VALUES];
-  for (uint64_t i = 0; i < N_VALUES; ++i) {
-    values[0][i] = n + i;
-    values[1][i] = n + i + 1;
+  uint64_t arrays[N_ARRAYS][N_VALUES];
+
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    for (uint64_t j = 0; j < N_VALUES; ++j) {
+      arrays[i][j] = n + i + j;
+    }
   }
 
   std::thread threads[N_FLAT_THREADS];
@@ -109,30 +122,29 @@ uint32_t Processor::ProcessThreadsFlat(uint32_t n) {
     ProcessOneValueInplace(p_value);
   };
 
-  Output("Before processing:   ", values[0]);
-  Output("                     ", values[1]);
-
-  for (uint64_t i = 0; i < N_FLAT_THREADS; ++i) {
-    threads[i] = std::thread(process, &values[0][i]);
-  }
-  for (uint64_t i = 0; i < N_FLAT_THREADS; ++i) {
-    threads[i].join();
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    if (!i) {
+      Output("Before processing:   ", arrays[i]);
+    } else {
+      Output("                     ", arrays[i]);
+    }
   }
 
-  Output("values[0] processed: ", values[0]);
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    for (uint64_t j = 0; j < N_FLAT_THREADS; ++j) {
+      threads[j] = std::thread(process, &arrays[i][j]);
+    }
+    for (uint64_t j = 0; j < N_FLAT_THREADS; ++j) {
+      threads[j].join();
+    }
 
-  for (uint64_t i = 0; i < N_FLAT_THREADS; ++i) {
-    threads[i] = std::thread(process, &values[1][i]);
+    std::string prefix = "arrays[" + std::to_string(i) + "] processed: ";
+    Output(prefix, arrays[i]);
   }
-  for (uint64_t i = 0; i < N_FLAT_THREADS; ++i) {
-    threads[i].join();
-  }
-
-  Output("values[1] processed: ", values[1]);
 
   std::cout << std::endl;
 
-  return GetFinalResult(values[0], values[1]);
+  return GetFinalResult(arrays);
 }
 
 
@@ -140,48 +152,48 @@ uint32_t Processor::ProcessThreadsFlat(uint32_t n) {
 uint32_t Processor::ProcessThreadsNested(uint32_t n) {
   std::cout << "START ProcessThreadsNested" << std::endl;
 
-  uint64_t values[2][N_VALUES];
-  for (uint64_t i = 0; i < N_VALUES; ++i) {
-    values[0][i] = n + i;
-    values[1][i] = n + i + 1;
+  uint64_t arrays[N_ARRAYS][N_VALUES];
+
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    for (uint64_t j = 0; j < N_VALUES; ++j) {
+      arrays[i][j] = n + i + j;
+    }
   }
 
   std::thread threads[N_IMMEDIATE_THREADS];
 
-  auto process = [](uint64_t* p_values) {
+  auto process = [](uint64_t* p_array) {
     std::thread nested_threads[N_NESTED_THREADS];
-    for (uint64_t i = 0; i < N_NESTED_THREADS; ++i) {
-      nested_threads[i] = std::thread(ProcessOneValueInplace, p_values + i);
+    for (uint64_t k = 0; k < N_NESTED_THREADS; ++k) {
+      nested_threads[k] = std::thread(ProcessOneValueInplace, p_array + k);
     }
-    for (uint64_t i = 0; i < N_NESTED_THREADS; ++i) {
-      nested_threads[i].join();
+    for (uint64_t k = 0; k < N_NESTED_THREADS; ++k) {
+      nested_threads[k].join();
     }
   };
 
-  Output("Before processing:   ", values[0]);
-  Output("                     ", values[1]);
-
-  for (uint64_t i = 0; i < N_IMMEDIATE_THREADS; ++i) {
-    uint64_t* p_values_0 = &values[0][i * N_NESTED_THREADS];
-    threads[i] = std::thread(process, p_values_0);
-  }
-  for (uint64_t i = 0; i < N_IMMEDIATE_THREADS; ++i) {
-    threads[i].join();
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    if (!i) {
+      Output("Before processing:   ", arrays[i]);
+    } else {
+      Output("                     ", arrays[i]);
+    }
   }
 
-  Output("values[0] processed: ", values[0]);
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    for (uint64_t j = 0; j < N_IMMEDIATE_THREADS; ++j) {
+      uint64_t* p_cur_array = &arrays[i][j * N_NESTED_THREADS];
+      threads[j] = std::thread(process, p_cur_array);
+    }
+    for (uint64_t j = 0; j < N_IMMEDIATE_THREADS; ++j) {
+      threads[j].join();
+    }
 
-  for (uint64_t i = 0; i < N_IMMEDIATE_THREADS; ++i) {
-    uint64_t* p_values_1 = &values[1][i * N_NESTED_THREADS];
-    threads[i] = std::thread(process, p_values_1);
+    std::string prefix = "arrays[" + std::to_string(i) + "] processed: ";
+    Output(prefix, arrays[i]);
   }
-  for (uint64_t i = 0; i < N_IMMEDIATE_THREADS; ++i) {
-    threads[i].join();
-  }
-
-  Output("values[1] processed: ", values[1]);
 
   std::cout << std::endl;
 
-  return GetFinalResult(values[0], values[1]);
+  return GetFinalResult(arrays);
 }
