@@ -12,6 +12,8 @@ endif()
 set(POOL_SIZE 12)
 
 add_library(example
+  include/example/task_group.h
+  src/task_group.cpp
   include/example/example.h
   src/example.cpp
   )

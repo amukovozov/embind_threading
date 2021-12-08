@@ -6,6 +6,7 @@
 #include <thread>
 #include <iostream>
 
+#include <example/task_group.h>
 
 constexpr uint64_t N_ARRAYS = 2;
 
@@ -21,6 +22,9 @@ static_assert(N_IMMEDIATE_THREADS * N_NESTED_THREADS == N_VALUES,
 static_assert(
     N_IMMEDIATE_THREADS + N_IMMEDIATE_THREADS * N_NESTED_THREADS <= POOL_SIZE,
     "check sufficient thread pool size");
+
+
+using namespace tg_naive;
 
 
 static void Output(const std::string& prefix, uint64_t p_array[N_VALUES]) {
@@ -197,3 +201,96 @@ uint32_t Processor::ProcessThreadsNested(uint32_t n) {
 
   return GetFinalResult(arrays);
 }
+
+
+
+uint32_t Processor::ProcessTGFlat(uint32_t n) {
+  std::cout << "START ProcessTGFlat" << std::endl;;
+
+  uint64_t arrays[N_ARRAYS][N_VALUES];
+
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    for (uint64_t j = 0; j < N_VALUES; ++j) {
+      arrays[i][j] = n + i + j;
+    }
+  }
+
+  TaskGroup tg;
+
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    if (!i) {
+      Output("Before processing:   ", arrays[i]);
+    } else {
+      Output("                     ", arrays[i]);
+    }
+  }
+
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    auto& cur_array = arrays[i];
+    for (uint64_t j = 0; j < N_VALUES; ++j) {
+      tg.Schedule([&cur_array, j]() {
+        ProcessOneValueInplace(&cur_array[j]);
+      });
+    }
+    tg.RunScheduled();
+
+    std::string prefix = "arrays[" + std::to_string(i) + "] processed: ";
+    Output(prefix, arrays[i]);
+  }
+
+  std::cout << std::endl;
+
+  return GetFinalResult(arrays);
+}
+
+
+uint32_t Processor::ProcessTGNested(uint32_t n) {
+  std::cout << "START ProcessTGNested" << std::endl;
+
+  uint64_t arrays[N_ARRAYS][N_VALUES];
+
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    for (uint64_t j = 0; j < N_VALUES; ++j) {
+      arrays[i][j] = n + i + j;
+    }
+  }
+
+  TaskGroup tg_immediate;
+
+  auto process = [](uint64_t* p_array_slice) {
+    TaskGroup tg_nested;
+    for (uint64_t k = 0; k < N_NESTED_THREADS; ++k) {
+      tg_nested.Schedule([p_array_slice, k]() {
+        ProcessOneValueInplace(p_array_slice + k);
+      });
+    }
+    tg_nested.RunScheduled();
+  };
+
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    if (!i) {
+      Output("Before processing:   ", arrays[i]);
+    } else {
+      Output("                     ", arrays[i]);
+    }
+  }
+
+  for (uint64_t i = 0; i < N_ARRAYS; ++i) {
+    auto& cur_array = arrays[i];
+
+    for (uint64_t j = 0; j < N_IMMEDIATE_THREADS; ++j) {
+      tg_immediate.Schedule([&process, &cur_array, j]() {
+        process(&cur_array[j * N_NESTED_THREADS]);
+      });
+    }
+    tg_immediate.RunScheduled();
+
+    std::string prefix = "arrays[" + std::to_string(i) + "] processed: ";
+    Output(prefix, arrays[i]);
+  }
+
+  std::cout << std::endl;
+
+  return GetFinalResult(arrays);
+}
+

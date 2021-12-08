@@ -46,6 +46,14 @@ self.addEventListener('message', (msg) => {
         var result = processor.ProcessThreadsNested(n);
         self.postMessage({ 'type': 'done', 'result': result });
         break;
+      case 'tg_flat':
+        var result = processor.ProcessTGFlat(n);
+        self.postMessage({ 'type': 'done', 'result': result });
+        break;
+      case 'tg_nested':
+        var result = processor.ProcessTGNested(n);
+        self.postMessage({ 'type': 'done', 'result': result });
+        break;
     }
   }
 });

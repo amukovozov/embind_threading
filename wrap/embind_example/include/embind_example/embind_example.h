@@ -23,6 +23,10 @@ EMSCRIPTEN_BINDINGS(Processor) {
                 &Processor::ProcessThreadsFlat)
       .function("ProcessThreadsNested",
                 &Processor::ProcessThreadsNested)
+      .function("ProcessTGFlat",
+                &Processor::ProcessTGFlat)
+      .function("ProcessTGNested",
+                &Processor::ProcessTGNested)
       ;
 }
 

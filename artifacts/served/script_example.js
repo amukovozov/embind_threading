@@ -29,3 +29,9 @@ button_threads_flat.addEventListener('click', (e) => {
 button_threads_nested.addEventListener('click', (e) => {
   worker.postMessage({ 'type': 'click', 'id': 'threads_nested' });
 });
+button_tg_flat.addEventListener('click', (e) => {
+  worker.postMessage({ 'type': 'click', 'id': 'tg_flat' });
+});
+button_tg_nested.addEventListener('click', (e) => {
+  worker.postMessage({ 'type': 'click', 'id': 'tg_nested' });
+});

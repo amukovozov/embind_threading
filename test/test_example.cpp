@@ -16,6 +16,10 @@ int main() {
   std::cout << "result: " << result << std::endl;
   result = processor.ProcessThreadsNested(n);
   std::cout << "result: " << result << std::endl;
+  result = processor.ProcessTGFlat(n);
+  std::cout << "result: " << result << std::endl;
+  result = processor.ProcessTGNested(n);
+  std::cout << "result: " << result << std::endl;
 
   return 0;
 }
