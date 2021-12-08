@@ -20,6 +20,13 @@ void TaskGroup::RunScheduled() {
 } // namespace tg_naive
 
 
+static void SequentialRun(std::vector<TaskType>& tasks) {
+  for (auto& task : tasks) {
+    task();
+  }
+}
+
+
 static void MetaTask(
     std::vector<TaskType>& tasks,
     std::atomic_size_t&    task_idx) {
@@ -60,3 +67,51 @@ void TaskGroup::RunScheduled() {
 }
 
 } // namespace tg_metatask_simple
+
+
+namespace tg_metatask_toplevel_only {
+
+struct RootToken {};
+
+static RootToken*& CurRootTokenPtr() {
+  static RootToken* root_token_ptr = nullptr;
+  return root_token_ptr;
+}
+
+class RootClaim {
+public:
+  RootClaim() {
+    if (CurRootTokenPtr()) {
+      is_root_ = false;
+    } else {
+      CurRootTokenPtr() = new RootToken;
+      is_root_ = true;
+    }
+  }
+
+  ~RootClaim() {
+    if (IsRoot()) {
+      delete CurRootTokenPtr();
+      CurRootTokenPtr() = nullptr;
+    }
+  }
+
+  bool IsRoot() const {
+    return is_root_;
+  }
+
+private:
+  bool is_root_;
+};
+
+void TaskGroup::RunScheduled() {
+  RootClaim maybe_root;
+  if (maybe_root.IsRoot()) {
+    MetataskRun(tasks_);
+  } else {
+    SequentialRun(tasks_);
+  }
+  tasks_.clear();
+}
+
+} // namespace tg_metatask_toplevel_only

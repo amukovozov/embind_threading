@@ -28,7 +28,9 @@ private:
 
 
 namespace tg_metatask_simple {
-/// Runs POOL_SIZE MetaTasks, each running tasks in a loop (by atomic index).
+/// Runs POOL_SIZE MetaTasks in threads, then runs one syncronously.
+/// Each MetaTask runs tasks in a loop (by atomic index).
+/// This makes ProcessTGFlat work when N_VALUES > POOL_SIZE
 
 class TaskGroup {
 public:
@@ -44,3 +46,25 @@ private:
 };
 
 } // namespace tg_metatask_simple
+
+
+namespace tg_metatask_toplevel_only {
+/// If there are no previous TaskGroups in the call stack, runs MetaTasks.
+/// Otherwise, just runs the tasks sequentially.
+/// This makes ProcessTGNested work, but not as fast as ProcessTGFlat
+/// (since it only uses N_IMMEDIATE_THREADS + 1 MetaTasks).
+
+class TaskGroup {
+public:
+  template<class Func>
+  void Schedule(Func&& f) {
+    tasks_.emplace_back(std::move(f));
+  }
+
+  void RunScheduled();
+
+private:
+  std::vector<TaskType> tasks_;
+};
+
+} // namespace tg_metatask_toplevel_only

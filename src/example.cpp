@@ -24,7 +24,7 @@ static_assert(
     "check sufficient thread pool size");
 
 
-using namespace tg_metatask_simple;
+using namespace tg_metatask_toplevel_only;
 
 
 static void Output(const std::string& prefix, uint64_t p_array[N_VALUES]) {
