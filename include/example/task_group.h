@@ -25,3 +25,22 @@ private:
 };
 
 } // namespace tg_naive
+
+
+namespace tg_metatask_simple {
+/// Runs POOL_SIZE MetaTasks, each running tasks in a loop (by atomic index).
+
+class TaskGroup {
+public:
+  template<class Func>
+  void Schedule(Func&& f) {
+    tasks_.emplace_back(std::move(f));
+  }
+
+  void RunScheduled();
+
+private:
+  std::vector<TaskType> tasks_;
+};
+
+} // namespace tg_metatask_simple
