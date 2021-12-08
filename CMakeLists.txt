@@ -16,8 +16,9 @@ add_library(example
   src/example.cpp
   )
 target_include_directories(example PUBLIC include)
+target_compile_options(example PUBLIC "-pthread")
 target_compile_definitions(example PUBLIC "-DPOOL_SIZE=${POOL_SIZE}")
-target_link_libraries(example PUBLIC pthread)
+target_link_options(example PUBLIC "-pthread")
 
 add_subdirectory(wrap/embind_example)
 
